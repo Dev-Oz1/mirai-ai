@@ -11,3 +11,5 @@ pydantic[email]==2.5.3
 pydantic-settings==2.1.0
 aiofiles==23.2.1
 httpx==0.26.0
+huggingface-hub==0.19.4
+urllib3>=1.26.11,<3

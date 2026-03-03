@@ -36,6 +36,10 @@ export function CoverLettersLibraryPage() {
   const [letterToDelete, setLetterToDelete] = useState<CoverLetter | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [editableContent, setEditableContent] = useState('');
+  const [isEditingPreview, setIsEditingPreview] = useState(false);
+  const [isSavingPreview, setIsSavingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState('');
 
   // Fetch cover letters
   useEffect(() => {
@@ -64,7 +68,32 @@ export function CoverLettersLibraryPage() {
   // Handle preview
   const handlePreview = (letter: CoverLetter) => {
     setSelectedLetter(letter);
+    setEditableContent(letter.content);
+    setIsEditingPreview(false);
+    setPreviewError('');
     setShowPreviewModal(true);
+  };
+
+  const handleSavePreview = async () => {
+    if (!selectedLetter) return;
+
+    try {
+      setIsSavingPreview(true);
+      setPreviewError('');
+
+      const updated = await coverLettersAPI.update(selectedLetter.id, {
+        content: editableContent,
+      });
+
+      setSelectedLetter(updated);
+      setCoverLetters((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+      setIsEditingPreview(false);
+    } catch (error) {
+      console.error('Failed to save cover letter:', error);
+      setPreviewError('Failed to save changes. Please try again.');
+    } finally {
+      setIsSavingPreview(false);
+    }
   };
 
   // Handle copy
@@ -383,14 +412,44 @@ export function CoverLettersLibraryPage() {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
               <div className="prose prose-sm max-w-none">
-                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                  {selectedLetter.content}
-                </div>
+                {isEditingPreview ? (
+                  <textarea
+                    value={editableContent}
+                    onChange={(e) => setEditableContent(e.target.value)}
+                    rows={18}
+                    className="w-full rounded-xl border border-gray-200 p-4 text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y bg-white"
+                  />
+                ) : (
+                  <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                    {editableContent}
+                  </div>
+                )}
               </div>
+              {previewError && (
+                <p className="mt-3 text-sm text-red-600">{previewError}</p>
+              )}
             </div>
 
             {/* Actions */}
             <div className="p-6 border-t border-gray-200 flex gap-3">
+              {isEditingPreview ? (
+                <Button
+                  variant="tech-gradient"
+                  onClick={handleSavePreview}
+                  isLoading={isSavingPreview}
+                  className="flex-1"
+                >
+                  Save Changes
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  onClick={() => setIsEditingPreview(true)}
+                  className="flex-1"
+                >
+                  Edit
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 onClick={() => setShowPreviewModal(false)}
@@ -400,7 +459,15 @@ export function CoverLettersLibraryPage() {
               </Button>
               <Button
                 variant="tech-gradient"
-                onClick={() => handleCopy(selectedLetter)}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(editableContent);
+                    setCopiedId(selectedLetter.id);
+                    setTimeout(() => setCopiedId(null), 2000);
+                  } catch (error) {
+                    console.error('Failed to copy:', error);
+                  }
+                }}
                 leftIcon={
                   copiedId === selectedLetter.id ? (
                     <Check className="h-4 w-4" />

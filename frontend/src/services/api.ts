@@ -50,6 +50,7 @@ export const coverLettersAPI = {
   getAll: () => api.get('/cover-letters').then((res) => res.data),
   getById: (id: number) => api.get(`/cover-letters/${id}`).then((res) => res.data),
   create: (data: any) => api.post('/cover-letters', data).then((res) => res.data),
+  update: (id: number, data: any) => api.put(`/cover-letters/${id}`, data).then((res) => res.data),
   delete: (id: number) => api.delete(`/cover-letters/${id}`).then((res) => res.data),
   generate: (data: any) => api.post('/cover-letters/generate', data).then((res) => res.data),
 };

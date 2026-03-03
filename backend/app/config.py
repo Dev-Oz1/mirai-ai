@@ -38,12 +38,14 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:8080"
 
     # AI Settings
-    AI_PROVIDER: str = "ollama"
+    AI_PROVIDER: str = "huggingface"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "gemma2:2b"  # Changed from llama3.2
+    HUGGINGFACE_MODEL: str = "meta-llama/Llama-3.1-8B-Instruct"
 
     # Paid AI (for premium users)
     ANTHROPIC_API_KEY: str = ""
+    HUGGINGFACE_API_KEY: str = ""
 
     def get_cors_origins(self) -> list:
         """Convert comma-separated string to list"""

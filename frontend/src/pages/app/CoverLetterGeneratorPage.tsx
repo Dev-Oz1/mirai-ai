@@ -25,6 +25,8 @@ export function CoverLetterGeneratorPage() {
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedLetter, setGeneratedLetter] = useState('');
+  const [generatedLetterId, setGeneratedLetterId] = useState<number | null>(null);
+  const [originalGeneratedLetter, setOriginalGeneratedLetter] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [error, setError] = useState('');
@@ -57,6 +59,8 @@ export function CoverLetterGeneratorPage() {
       setIsGenerating(true);
       setError('');
       setGeneratedLetter('');
+      setGeneratedLetterId(null);
+      setOriginalGeneratedLetter('');
 
       const response = await coverLettersAPI.generate({
         job_id: selectedJobId,
@@ -65,6 +69,8 @@ export function CoverLetterGeneratorPage() {
       });
 
       setGeneratedLetter(response.content);
+      setOriginalGeneratedLetter(response.content);
+      setGeneratedLetterId(response.id ?? null);
     } catch (error: any) {
       console.error('Generation failed:', error);
       setError(
@@ -81,8 +87,17 @@ export function CoverLetterGeneratorPage() {
     try {
       setIsSaving(true);
 
-      // The letter is already saved by the generate endpoint
-      // Just navigate to the library
+      // The letter is already created by generate; persist edits if content changed.
+      if (
+        generatedLetterId &&
+        generatedLetter.trim() &&
+        generatedLetter !== originalGeneratedLetter
+      ) {
+        await coverLettersAPI.update(generatedLetterId, {
+          content: generatedLetter,
+        });
+      }
+
       navigate('/cover-letters');
     } catch (error) {
       console.error('Save failed:', error);
@@ -295,9 +310,12 @@ export function CoverLetterGeneratorPage() {
                 </div>
               ) : generatedLetter ? (
                 <div className="prose prose-sm max-w-none">
-                  <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                    {generatedLetter}
-                  </div>
+                  <textarea
+                    value={generatedLetter}
+                    onChange={(e) => setGeneratedLetter(e.target.value)}
+                    rows={22}
+                    className="w-full rounded-xl border border-gray-200 p-4 text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y bg-white"
+                  />
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full py-20 text-center">
