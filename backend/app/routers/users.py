@@ -248,12 +248,6 @@ async def _exchange_github_code(code: str, redirect_uri: str) -> dict:
 @router.post("/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(user: UserCreate, db: Session = Depends(get_db)):
     """Register a new user."""
-    if len(user.password.encode("utf-8")) > 72:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be 72 bytes or less",
-        )
-
     existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
         raise HTTPException(
@@ -547,11 +541,6 @@ async def change_password(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="New password must be different from current password",
-        )
-    if len(payload.new_password.encode("utf-8")) > 72:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be 72 bytes or less",
         )
 
     user.hashed_password = get_password_hash(payload.new_password)

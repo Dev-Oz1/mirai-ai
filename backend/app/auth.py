@@ -13,8 +13,10 @@ from .models import User
 from .session_control import is_user_forced_logged_out
 from .schemas import TokenData
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing context:
+# - bcrypt_sha256 avoids bcrypt's 72-byte input limit for new hashes
+# - bcrypt remains for verifying existing hashes already stored in DB
+pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated="auto")
 logger = logging.getLogger(__name__)
 
 # OAuth2 scheme for token authentication
@@ -24,16 +26,26 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a hashed password."""
     try:
-        return pwd_context.verify(_truncate_password_for_bcrypt(plain_password), hashed_password)
+        return pwd_context.verify(plain_password, hashed_password)
+    except ValueError as exc:
+        # Compatibility fallback for legacy bcrypt hashes with >72-byte input.
+        if "longer than 72 bytes" in str(exc):
+            try:
+                return pwd_context.verify(_truncate_password_for_bcrypt(plain_password), hashed_password)
+            except Exception as fallback_exc:
+                logger.error("Password verification fallback error: %s", fallback_exc)
+                return False
+        logger.error("Password verification error: %s", exc)
+        return False
     except Exception as exc:
         logger.error("Password verification error: %s", exc)
         return False
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a plain password using bcrypt."""
+    """Hash a plain password."""
     try:
-        return pwd_context.hash(_truncate_password_for_bcrypt(password))
+        return pwd_context.hash(password)
     except Exception as exc:
         logger.error("Password hashing error: %s", exc)
         raise
