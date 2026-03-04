@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import logging
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -14,6 +15,7 @@ from .schemas import TokenData
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+logger = logging.getLogger(__name__)
 
 # OAuth2 scheme for token authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -21,16 +23,37 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a hashed password."""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return pwd_context.verify(_truncate_password_for_bcrypt(plain_password), hashed_password)
+    except Exception as exc:
+        logger.error("Password verification error: %s", exc)
+        return False
 
 
 def get_password_hash(password: str) -> str:
     """Hash a plain password using bcrypt."""
-    # Truncate password to 72 bytes if necessary (bcrypt limitation)
-    if len(password.encode('utf-8')) > 72:
-        password = password[:72]
+    try:
+        return pwd_context.hash(_truncate_password_for_bcrypt(password))
+    except Exception as exc:
+        logger.error("Password hashing error: %s", exc)
+        raise
 
-    return pwd_context.hash(password)
+
+def _truncate_password_for_bcrypt(password: str) -> str:
+    """Bcrypt only uses first 72 bytes; trim safely when over limit."""
+    encoded = password.encode("utf-8")
+    if len(encoded) <= 72:
+        return password
+
+    # Slice bytes and decode safely to avoid cutting in the middle of UTF-8 codepoint.
+    truncated = encoded[:72]
+    while truncated:
+        try:
+            return truncated.decode("utf-8")
+        except UnicodeDecodeError:
+            truncated = truncated[:-1]
+
+    return ""
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
