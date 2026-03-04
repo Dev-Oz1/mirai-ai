@@ -45,7 +45,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """Hash a plain password."""
     try:
-        return pwd_context.hash(password)
+        return pwd_context.hash(password, scheme="bcrypt_sha256")
+    except ValueError as exc:
+        if "longer than 72 bytes" in str(exc):
+            # Extra safety in case environment falls back to raw bcrypt behavior.
+            return pwd_context.hash(_truncate_password_for_bcrypt(password), scheme="bcrypt")
+        logger.error("Password hashing error: %s", exc)
+        raise
     except Exception as exc:
         logger.error("Password hashing error: %s", exc)
         raise
