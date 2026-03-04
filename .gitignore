@@ -35,10 +35,10 @@ build/
 .env
 .env.*
 !.env.example
+!frontend/.env.production
 backend/.env
 frontend/.env
 
 # Local app data
 *.db
 backend/uploads/
-
