@@ -57,6 +57,7 @@ app.add_middleware(
 
 
 @app.get("/")
+@app.head("/")
 async def root():
     return {
         "message": "Welcome to Mirai AI API",
@@ -67,6 +68,7 @@ async def root():
 
 
 @app.get("/health")
+@app.head("/health")
 async def health_check():
     return {
         "status": "healthy",
